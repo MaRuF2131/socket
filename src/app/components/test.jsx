@@ -17,7 +17,7 @@ async function enterRoom(roomId) {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
-      Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhM2MxMGZiNWE0Mzc2NGI5OGZkYzdhMyIsIm5hbWUiOiJtZCBtYXJ1ZiBhaG1tZWQiLCJlbWFpbCI6Im1hcnVmQGdtYWlsLmNvbSIsImlhdCI6MTc4MjMyMTQwNCwiZXhwIjoxNzgyOTI2MjA0fQ.kWzu3lpJ2-A5tUl7GiDZE2XcxmAXlJfiD9-rIaxZ7Z8",
+      Authorization: "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDdiZTRlNWIyMzQ0MDVjMzdiNDQ1MyIsIm5hbWUiOiJtZCBtYXJ1ZiBhaG1tZWQyMjIiLCJlbWFpbCI6Im1hcnVmMjJAZ21haWwuY29tIiwiaWF0IjoxNzgzMDg2NjcxLCJleHAiOjE3ODM2OTE0NzF9.CXSTV-yoXtWPxIT3qeBu7NNYyGw08sKqjj9hK7hcm_Q",
     },
   });
   return res.json();

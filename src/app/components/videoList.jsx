@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 
 const API = "https://video-streaming-server-5d4s.onrender.com/api";
-const TOKEN ="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhM2MxMGZiNWE0Mzc2NGI5OGZkYzdhMyIsIm5hbWUiOiJtZCBtYXJ1ZiBhaG1tZWQiLCJlbWFpbCI6Im1hcnVmQGdtYWlsLmNvbSIsImlhdCI6MTc4MjMyMTQwNCwiZXhwIjoxNzgyOTI2MjA0fQ.kWzu3lpJ2-A5tUl7GiDZE2XcxmAXlJfiD9-rIaxZ7Z8";
+const TOKEN ="Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjZhNDdiZTRlNWIyMzQ0MDVjMzdiNDQ1MyIsIm5hbWUiOiJtZCBtYXJ1ZiBhaG1tZWQyMjIiLCJlbWFpbCI6Im1hcnVmMjJAZ21haWwuY29tIiwiaWF0IjoxNzgzMDg2NjcxLCJleHAiOjE3ODM2OTE0NzF9.CXSTV-yoXtWPxIT3qeBu7NNYyGw08sKqjj9hK7hcm_Q";
 
 /* =========================
    API
@@ -13,7 +13,8 @@ async function fetchVideosAPI(roomId, cursor, limit = 10) {
   const params = new URLSearchParams();
   if (cursor) params.set("cursor", cursor);
   params.set("limit", limit.toString());
-
+ console.log("params", params);
+ 
   const res = await fetch(`${API}/rooms/${roomId}/videos?${params}`, {
     method:"GET",
     headers: {
@@ -167,6 +168,7 @@ export default function VideoList({ roomId, currentVideoId }) {
       setVideos(vids);
       setNextCursor(data?.data?.nextCursor || null);
       setHasMore(data?.data?.hasMore ?? false);
+      await fetchVideosAPI(roomId, nextCursor)
     } catch (err) {
       console.error("❌ Video init error:", err);
     } finally {
