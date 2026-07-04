@@ -228,8 +228,8 @@ useEffect(() => {
         url={currentVideo?.currentVideo.videoUrl}
         startTime={currentVideo.currentSecond || 0}
         onEnded={() => {
-          if (roomId && currentVideo?.id) {
-            videoEnded(roomId.trim(), currentVideo.id);
+          if (roomId && currentVideo?.currentVideo.id) {
+            videoEnded(roomId.trim(), currentVideo?.currentVideo?.id.trim());
           }
         }} 
       />

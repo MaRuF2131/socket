@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 
-export default function LiveStreamPage({url,onEnded,startTime}) {
+export default function LiveStreamPage({ url, onEnded, startTime }) {
   const videoRef = useRef(null);
   const [isMuted, setIsMuted] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -29,36 +29,16 @@ export default function LiveStreamPage({url,onEnded,startTime}) {
     if (!v) return;
     const onCanPlay = () => setIsLoaded(true);
     v.addEventListener("canplay", onCanPlay);
-    // যদি আগেই লোড হয়ে থাকে
     if (v.readyState >= 3) setIsLoaded(true);
     return () => v.removeEventListener("canplay", onCanPlay);
   }, []);
 
-  // সব কীবোর্ড শর্টকাট ব্লক (Space, Arrow, M ইত্যাদি)
+  // সব কীবোর্ড শর্টকাট ব্লক
   useEffect(() => {
     const block = (e) => {
-      const blocked = [
-        " ",
-        "ArrowLeft",
-        "ArrowRight",
-        "ArrowUp",
-        "ArrowDown",
-        "m",
-        "M",
-        "k",
-        "K",
-        "f",
-        "F",
-        "j",
-        "J",
-        "l",
-        "L",
-      ];
+      const blocked = [" ", "ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "m", "M", "k", "K", "f", "F", "j", "J", "l", "L"];
       if (blocked.includes(e.key)) {
-        // শুধু M কী দিয়ে মিউট টগল করতে দাও
-        if (e.key === "m" || e.key === "M") {
-          toggleMute();
-        }
+        if (e.key === "m" || e.key === "M") toggleMute();
         e.preventDefault();
         e.stopPropagation();
       }
@@ -67,20 +47,24 @@ export default function LiveStreamPage({url,onEnded,startTime}) {
     return () => window.removeEventListener("keydown", block, true);
   }, [toggleMute]);
 
-  // ভিডিও থামানোর চেষ্টা আটকাও — সবসময় চালু রাখো
+  /* =========================
+     ✅ পারফেক্ট ফোর্স প্লে (রেস কন্ডিশন ফিক্স সহ)
+  ========================= */
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
     const forcePlay = () => {
+      // গুরুত্বপূর্ণ: যদি ভিডিও এই মুহূর্তে সিক (জাম্প) করছে, তাহলে প্লে করবো না
+      // সিক শেষ হলে নিচের ইফেক্টটা প্লে করে দেবে
+      if (v.seeking) return; 
+      
       if (v.paused) {
         v.play().catch(() => {});
       }
     };
 
-    // pause ইভেন্ট ধরে আবার চালু করো
     v.addEventListener("pause", forcePlay);
-    // ended হলে আবার শুরু (loop আছে তবুও সেফটি)
     v.addEventListener("ended", forcePlay);
 
     return () => {
@@ -90,50 +74,42 @@ export default function LiveStreamPage({url,onEnded,startTime}) {
   }, []);
 
   /* =========================
-     ✅ সিক করে প্লে করার ইফেক্ট (পারফেক্ট ফিক্স)
+     ✅ সিক করে প্লে করার ক্লিন ইফেক্ট
   ========================= */
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
 
-    const handleLoaded = () => {
-      if (startTime > 0) {
-        // ১. প্রথমে ঠিক সেকেন্ডে জাম্প করো
-        v.currentTime = startTime;
+    const startPlayback = () => {
+      // যদি ভিডিও ইতিমধ্যে চলতে থাকে, তাহলে আর নতুন করে প্লে করার দরকার নেই (স্ট্রিক্ট মোড ফিক্স)
+      if (!v.paused && v.currentTime > 0) return;
 
-        // ২. সিক শেষ হওয়ার জন্য 'seeked' ইভেন্ট ধরো
+      if (startTime > 0) {
+        // সিক শেষ হওয়ার জন্য 'seeked' ইভেন্ট আগে ধরে রাখলাম
         const onSeeked = () => {
-          // সিক শেষ, এখন প্লে করো
           v.play().catch(() => {});
-          v.removeEventListener("seeked", onSeeked);
+          v.removeEventListener("seeked", onSeeked); // একবার কাজ করলে রিমুভ করে দিলাম
         };
         v.addEventListener("seeked", onSeeked);
+        
+        // এখন টাইম সেট করলাম
+        v.currentTime = startTime;
       } else {
-        // স্টার্ট টাইম না থাকলে সাধারণ প্লে
         v.play().catch(() => {});
       }
       
       setIsLoaded(true);
     };
 
-    v.addEventListener("canplay", handleLoaded);
-
-    // যদি আগে থেকেই বাফার হয়ে থাকে
+    // ডুপ্লিকেট কোড এড়ানোর জন্য একটাই ফাংশনে রেখে দুই জায়গায় কল করা হয়েছে
+    v.addEventListener("canplay", startPlayback);
     if (v.readyState >= 3) {
-      if (startTime > 0) {
-        v.currentTime = startTime;
-        const onSeeked = () => {
-          v.play().catch(() => {});
-          v.removeEventListener("seeked", onSeeked);
-        };
-        v.addEventListener("seeked", onSeeked);
-      } else {
-        v.play().catch(() => {});
-      }
-      setIsLoaded(true);
+      startPlayback();
     }
 
-    return () => v.removeEventListener("canplay", handleLoaded);
+    return () => {
+      v.removeEventListener("canplay", startPlayback);
+    };
   }, [url, startTime]);
 
   return (
@@ -155,15 +131,15 @@ export default function LiveStreamPage({url,onEnded,startTime}) {
           ref={videoRef}
           onEnded={onEnded}
           className="w-full h-full object-cover block"
-          src={url}//"https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"
+          src={url}
           autoPlay
           muted
-          loop
           playsInline
           disablePictureInPicture
           disableRemotePlayback
         />
 
+        {/* লোডিং ওভারলে */}
         <div
           className={`absolute inset-0 flex flex-col items-center justify-center bg-black/80 z-20 transition-opacity duration-500 ${
             isLoaded ? "opacity-0 pointer-events-none" : "opacity-100"
@@ -177,38 +153,25 @@ export default function LiveStreamPage({url,onEnded,startTime}) {
 
         <div className="absolute bottom-0 inset-x-0 h-28 bg-gradient-to-t from-black/50 to-transparent pointer-events-none z-[5]" />
 
+        {/* LIVE ব্যাজ */}
         <div className="absolute top-4 left-4 flex items-center gap-2 bg-red-600/90 backdrop-blur-md px-3.5 py-1.5 rounded-lg z-10 pointer-events-none">
           <span className="w-2 h-2 bg-white rounded-full animate-pulse" />
-          <span className="text-[11px] font-bold tracking-wider uppercase">
-            LIVE
-          </span>
+          <span className="text-[11px] font-bold tracking-wider uppercase">LIVE</span>
         </div>
 
-
+        {/* ভিউয়ার কাউন্ট */}
         <div className="absolute top-4 right-4 flex items-center gap-1.5 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-lg text-[12px] font-medium z-10 pointer-events-none">
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
             <circle cx="12" cy="12" r="3" />
           </svg>
           {viewers.toLocaleString("en-BD")}
         </div>
 
-
         {/* মিউট টোস্ট */}
         <div
           className={`absolute bottom-[76px] right-4 bg-black/70 backdrop-blur-md px-4 py-2 rounded-lg text-[13px] font-medium z-10 pointer-events-none transition-all duration-300 ${
-            showToast
-              ? "opacity-100 translate-y-0"
-              : "opacity-0 translate-y-2"
+            showToast ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
           }`}
         >
           {toastMsg}
@@ -221,33 +184,13 @@ export default function LiveStreamPage({url,onEnded,startTime}) {
           aria-label={isMuted ? "আনমিউট করুন" : "মিউট করুন"}
         >
           {isMuted ? (
-            /* মিউট আইকন */
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
               <line x1="23" y1="9" x2="17" y2="15" />
               <line x1="17" y1="9" x2="23" y2="15" />
             </svg>
           ) : (
-            /* আনমিউট আইকন */
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
               <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
               <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
